@@ -28,21 +28,25 @@ def dictionary():
     """
 
 
-    word = request.args.getlist('word')
+    words = request.args.getlist('word')
 
-    if not word:
-        return jsonify({'status': 'error', 'data': 'word not found'})
+    if not words:
+        return jsonify({'status': 'error', 'word':words, 'data': 'word not found'})
 
-    definitions = match_exact(word)
-    if definitions:
-        return jsonify({'status': 'success', 'data':definitions})
 
-    definitions = match_like(word)
-    if definitions:
-        return jsonify({'status': 'partial', 'data': definitions})
-    else:
-        return jsonify({'status':'error', 'data':'word not found'})
+    response = {'words':[]}
+    for word in words:
+        definitions = match_exact(word)
+        if definitions:
+            response['words'].append({'status': 'success', 'word':word, 'data':definitions})
+        else:
+            definitions = match_like(word)
+            if definitions:
+                response['words'].append({'status': 'partial', 'word':word, 'data': definitions})
+            else:
+                response['words'].append({'status':'error', 'word':word, 'data':'word not found'})
 
+    return jsonify(response)
 
 if __name__ == "__main__":
     app.run()
