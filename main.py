@@ -1,8 +1,11 @@
-from urllib import response
-from flask import Flask, request, send_file, jsonify
+import io
 from bin.filters import apply_filter
+from typing import List, Optional
+from fastapi import FastAPI, File, UploadFile
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 
-app = Flask(__name__)
+app = FastAPI()
 
 # Read the PIL document to find out which filters are available out-of the box
 filters_available = [
@@ -19,7 +22,7 @@ filters_available = [
 ]
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.api_route("/", methods=["GET", "POST"])
 def index():
     """
     TODO:
@@ -29,10 +32,10 @@ def index():
         'filters_available':filters_available,
         'usage':{'http_method':'POST', 'URL':'/<filter_available>/'}
     }
-    return jsonify(response)
+    return jsonable_encoder(response)
 
-@app.post("/<filter>")
-def image_filter(filter):
+@app.post("/{filter}")
+def image_filter(filter:str, img:UploadFile=File(...)):
     """
     TODO:
     1. Checks if the provided filter is available, if not, return an error
@@ -42,16 +45,12 @@ def image_filter(filter):
     """
     if filter not in filters_available:
         response = {'error':'incorrect filter'}
-        return jsonify(response)
+        return jsonable_encoder(response)
 
-    file = request.files['image']
-    if not file:
-        response = {'error': 'no file provided'}
-        return jsonify(response)
+    filtered_image = apply_filter(img.file, filter)
+    return StreamingResponse(filtered_image, media_type='image/jpeg')
 
-    filtered_image = apply_filter(file, filter)
 
-    return send_file(filtered_image, mimetype='image/JPEG')   
      
 if __name__ == "__main__":
     app.run()
